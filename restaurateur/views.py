@@ -8,7 +8,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 
 
-from foodcartapp.models import Product, Restaurant, Order
+from foodcartapp.models import Product, Restaurant, RestaurantMenuItem, Order
 
 
 class Login(forms.Form):
@@ -90,11 +90,49 @@ def view_restaurants(request):
     })
 
 
+def get_available_restaurants(order, menu_items):
+    product_ids = [item.product_id for item in order.items.all()]
+    if not product_ids:
+        return []
+
+    restaurants_for_products = []
+    for product_id in product_ids:
+        restaurants = {
+            item.restaurant_id
+            for item in menu_items
+            if item.product_id == product_id and item.availability
+        }
+        restaurants_for_products.append(restaurants)
+
+    if not restaurants_for_products:
+        return []
+
+    available_restaurant_ids = set.intersection(*restaurants_for_products)
+
+    restaurants_by_id = {item.restaurant_id: item.restaurant for item in menu_items}
+    return [restaurants_by_id[rid] for rid in available_restaurant_ids if rid in restaurants_by_id]
+
+
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    order_items = Order.objects.exclude(
+    orders = Order.objects.exclude(
         status=Order.STATUS_COMPLETED
-    ).with_total_price().prefetch_related('items__product')
+    ).with_total_price().prefetch_related('items__product', 'restaurant')
+
+    menu_items = list(RestaurantMenuItem.objects.select_related('restaurant'))
+
+    order_items = []
+    for order in orders:
+        if order.restaurant:
+            available_restaurants = None
+        else:
+            available_restaurants = get_available_restaurants(order, menu_items)
+
+        order_items.append({
+            'order': order,
+            'available_restaurants': available_restaurants,
+        })
+
     return render(request, template_name='order_items.html', context={
         'order_items': order_items,
     })

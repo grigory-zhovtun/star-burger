@@ -204,6 +204,14 @@ class Order(models.Model):
         blank=True,
         db_index=True
     )
+    restaurant = models.ForeignKey(
+        Restaurant,
+        on_delete=models.SET_NULL,
+        verbose_name='ресторан',
+        related_name='orders',
+        null=True,
+        blank=True
+    )
 
     objects = OrderQuerySet.as_manager()
 
