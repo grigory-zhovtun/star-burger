@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 
@@ -20,6 +21,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['products', 'firstname', 'lastname', 'phonenumber', 'address']
 
+    @transaction.atomic
     def create(self, validated_data):
         products_data = validated_data.pop('products')
         order = Order.objects.create(**validated_data)
