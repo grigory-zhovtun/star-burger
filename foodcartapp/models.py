@@ -146,12 +146,28 @@ class Order(models.Model):
         (STATUS_COMPLETED, 'Выполнен'),
     ]
 
+    PAYMENT_CASH = 'cash'
+    PAYMENT_ONLINE = 'online'
+
+    PAYMENT_CHOICES = [
+        (PAYMENT_CASH, 'Наличностью'),
+        (PAYMENT_ONLINE, 'Электронно'),
+    ]
+
     status = models.CharField(
         'статус',
         max_length=20,
         choices=STATUS_CHOICES,
         default=STATUS_UNPROCESSED,
         db_index=True
+    )
+    payment_method = models.CharField(
+        'способ оплаты',
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        db_index=True,
+        blank=True,
+        default=''
     )
     firstname = models.CharField(
         'имя',
