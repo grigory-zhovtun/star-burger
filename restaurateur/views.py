@@ -1,3 +1,6 @@
+import requests
+from geopy import distance
+
 from django import forms
 from django.shortcuts import redirect, render
 from django.views import View
@@ -9,6 +12,7 @@ from django.contrib.auth import views as auth_views
 
 
 from foodcartapp.models import Product, Restaurant, RestaurantMenuItem, Order
+from foodcartapp.coordinates import fetch_coordinates
 
 
 class Login(forms.Form):
@@ -127,6 +131,32 @@ def view_orders(request):
             available_restaurants = None
         else:
             available_restaurants = get_available_restaurants(order, menu_items)
+            if available_restaurants:
+                try:
+                    order_coords = fetch_coordinates(order.address)
+                    if order_coords:
+                        restaurants_with_distance = []
+                        for restaurant in available_restaurants:
+                            restaurant_coords = fetch_coordinates(restaurant.address)
+                            if restaurant_coords:
+                                dist = distance.distance(order_coords, restaurant_coords).km
+                                restaurants_with_distance.append({
+                                    'restaurant': restaurant,
+                                    'distance': round(dist, 3),
+                                })
+                            else:
+                                restaurants_with_distance.append({
+                                    'restaurant': restaurant,
+                                    'distance': None,
+                                })
+                        available_restaurants = sorted(
+                            restaurants_with_distance,
+                            key=lambda x: x['distance'] if x['distance'] is not None else float('inf')
+                        )
+                    else:
+                        available_restaurants = None
+                except requests.exceptions.RequestException:
+                    available_restaurants = None
 
         order_items.append({
             'order': order,

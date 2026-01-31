@@ -42,8 +42,8 @@
             <details>
               <summary>Может быть приготовлен ресторанами:</summary>
               <ul>
-                {% for restaurant in item.available_restaurants %}
-                  <li>{{ restaurant.name }}</li>
+                {% for entry in item.available_restaurants %}
+                  <li>{{ entry.restaurant.name }}{% if entry.distance %} - {{ entry.distance }} км{% endif %}</li>
                 {% endfor %}
               </ul>
             </details>
