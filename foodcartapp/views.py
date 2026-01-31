@@ -1,9 +1,10 @@
-import json
-
 from django.http import JsonResponse
 from django.templatetags.static import static
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-from .models import Product, Order, OrderItem
+from .models import Product
+from .serializers import OrderSerializer
 
 
 def banners_list_api(request):
@@ -58,21 +59,9 @@ def product_list_api(request):
     })
 
 
+@api_view(['POST'])
 def register_order(request):
-    data = json.loads(request.body.decode())
-
-    order = Order.objects.create(
-        firstname=data['firstname'],
-        lastname=data['lastname'],
-        phonenumber=data['phonenumber'],
-        address=data['address']
-    )
-
-    for item in data['products']:
-        OrderItem.objects.create(
-            order=order,
-            product=Product.objects.get(id=item['product']),
-            quantity=item['quantity']
-        )
-
-    return JsonResponse({})
+    serializer = OrderSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({})
