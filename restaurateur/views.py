@@ -117,6 +117,13 @@ def get_available_restaurants(order, menu_items):
     return [restaurants_by_id[rid] for rid in available_restaurant_ids if rid in restaurants_by_id]
 
 
+def get_coordinates_safe(address):
+    try:
+        return fetch_coordinates(address)
+    except requests.exceptions.RequestException:
+        return None
+
+
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     orders = Order.objects.exclude(
@@ -132,30 +139,27 @@ def view_orders(request):
         else:
             available_restaurants = get_available_restaurants(order, menu_items)
             if available_restaurants:
-                try:
-                    order_coords = fetch_coordinates(order.address)
-                    if order_coords:
-                        restaurants_with_distance = []
-                        for restaurant in available_restaurants:
-                            restaurant_coords = fetch_coordinates(restaurant.address)
-                            if restaurant_coords:
-                                dist = distance.distance(order_coords, restaurant_coords).km
-                                restaurants_with_distance.append({
-                                    'restaurant': restaurant,
-                                    'distance': round(dist, 3),
-                                })
-                            else:
-                                restaurants_with_distance.append({
-                                    'restaurant': restaurant,
-                                    'distance': None,
-                                })
-                        available_restaurants = sorted(
-                            restaurants_with_distance,
-                            key=lambda x: x['distance'] if x['distance'] is not None else float('inf')
-                        )
-                    else:
-                        available_restaurants = None
-                except requests.exceptions.RequestException:
+                order_coords = get_coordinates_safe(order.address)
+                if order_coords:
+                    restaurants_with_distance = []
+                    for restaurant in available_restaurants:
+                        restaurant_coords = get_coordinates_safe(restaurant.address)
+                        if restaurant_coords:
+                            dist = distance.distance(order_coords, restaurant_coords).km
+                            restaurants_with_distance.append({
+                                'restaurant': restaurant,
+                                'distance': round(dist, 3),
+                            })
+                        else:
+                            restaurants_with_distance.append({
+                                'restaurant': restaurant,
+                                'distance': None,
+                            })
+                    available_restaurants = sorted(
+                        restaurants_with_distance,
+                        key=lambda x: x['distance'] if x['distance'] is not None else float('inf')
+                    )
+                else:
                     available_restaurants = None
 
         order_items.append({
