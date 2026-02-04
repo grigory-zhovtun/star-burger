@@ -12,6 +12,7 @@ from django.contrib.auth import views as auth_views
 
 
 from foodcartapp.models import Product, Restaurant, Order
+from places.models import Place
 from places.coordinates import fetch_coordinates
 
 
@@ -103,9 +104,22 @@ def get_coordinates_safe(address):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    orders = Order.objects.exclude(
+    orders = list(Order.objects.exclude(
         status=Order.STATUS_COMPLETED
-    ).with_total_price().with_available_restaurants()
+    ).with_total_price().with_available_restaurants())
+
+    addresses = set()
+    for order in orders:
+        addresses.add(order.address)
+        for restaurant in order.available_restaurants:
+            addresses.add(restaurant.address)
+
+    places = Place.objects.filter(address__in=addresses)
+    coordinates_by_address = {
+        place.address: (place.lat, place.lon)
+        for place in places
+        if place.lat is not None and place.lon is not None
+    }
 
     order_items = []
     for order in orders:
@@ -114,11 +128,21 @@ def view_orders(request):
         else:
             available_restaurants = order.available_restaurants
             if available_restaurants:
-                order_coords = get_coordinates_safe(order.address)
+                order_coords = coordinates_by_address.get(order.address)
+                if not order_coords:
+                    order_coords = get_coordinates_safe(order.address)
+                    if order_coords:
+                        coordinates_by_address[order.address] = order_coords
+
                 if order_coords:
                     restaurants_with_distance = []
                     for restaurant in available_restaurants:
-                        restaurant_coords = get_coordinates_safe(restaurant.address)
+                        restaurant_coords = coordinates_by_address.get(restaurant.address)
+                        if not restaurant_coords:
+                            restaurant_coords = get_coordinates_safe(restaurant.address)
+                            if restaurant_coords:
+                                coordinates_by_address[restaurant.address] = restaurant_coords
+
                         if restaurant_coords:
                             dist = distance.distance(order_coords, restaurant_coords).km
                             restaurants_with_distance.append({
