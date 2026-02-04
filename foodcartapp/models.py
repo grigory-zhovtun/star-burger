@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.db import models
 from django.db.models import F, Sum
 from django.core.validators import MinValueValidator
@@ -131,6 +133,41 @@ class OrderQuerySet(models.QuerySet):
         return self.annotate(
             total_price=Sum(F('items__price') * F('items__quantity'))
         )
+
+    def with_available_restaurants(self):
+        menu_items = RestaurantMenuItem.objects.filter(
+            availability=True
+        ).select_related('restaurant')
+
+        products_in_restaurants = defaultdict(set)
+        for menu_item in menu_items:
+            products_in_restaurants[menu_item.product_id].add(menu_item.restaurant)
+
+        orders = self.prefetch_related('items')
+
+        for order in orders:
+            if order.restaurant:
+                order.available_restaurants = []
+                continue
+
+            product_ids = [item.product_id for item in order.items.all()]
+            if not product_ids:
+                order.available_restaurants = []
+                continue
+
+            restaurants_sets = [
+                products_in_restaurants[product_id]
+                for product_id in product_ids
+                if product_id in products_in_restaurants
+            ]
+
+            if not restaurants_sets or len(restaurants_sets) != len(product_ids):
+                order.available_restaurants = []
+                continue
+
+            order.available_restaurants = list(set.intersection(*restaurants_sets))
+
+        return orders
 
 
 class Order(models.Model):
