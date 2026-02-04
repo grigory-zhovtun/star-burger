@@ -178,7 +178,8 @@ class Order(models.Model):
         max_length=50
     )
     phonenumber = PhoneNumberField(
-        'телефон'
+        'телефон',
+        db_index=True
     )
     address = models.TextField(
         'адрес'
