@@ -12,7 +12,7 @@ from django.contrib.auth import views as auth_views
 
 
 from foodcartapp.models import Product, Restaurant, RestaurantMenuItem, Order
-from foodcartapp.coordinates import fetch_coordinates
+from places.coordinates import fetch_coordinates
 
 
 class Login(forms.Form):
