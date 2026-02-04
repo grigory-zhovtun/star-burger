@@ -40,6 +40,6 @@ def fetch_coordinates(address):
     place.save()
 
     if lat is None:
-        return None
+        return None, None
 
     return lat, lon
