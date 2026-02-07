@@ -127,3 +127,16 @@ STATICFILES_DIRS = [
 ]
 
 YANDEX_GEOCODER_APIKEY = env('YANDEX_GEOCODER_APIKEY', '')
+
+ROLLBAR_ACCESS_TOKEN = env('ROLLBAR_ACCESS_TOKEN', '')
+ROLLBAR_ENVIRONMENT = env('ROLLBAR_ENVIRONMENT', 'development')
+
+if ROLLBAR_ACCESS_TOKEN:
+    ROLLBAR = {
+        'access_token': ROLLBAR_ACCESS_TOKEN,
+        'environment': ROLLBAR_ENVIRONMENT,
+        'code_version': '1.0',
+        'root': BASE_DIR,
+    }
+
+    MIDDLEWARE.append('rollbar.contrib.django.middleware.RollbarNotifierMiddleware')
