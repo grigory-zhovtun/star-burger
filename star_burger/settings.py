@@ -1,8 +1,12 @@
 import os
 
 import dj_database_url
+from django.db.backends.postgresql import features as pg_features
 
 from environs import Env
+
+# Allow PostgreSQL 12+ (Django 5.2 formally requires 14+, but 12 is compatible)
+pg_features.DatabaseFeatures.minimum_database_version = (12,)
 
 
 env = Env()
